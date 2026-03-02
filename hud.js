@@ -8,7 +8,8 @@
 
   // ─── Supabase Config ──────────────────────────────
   var SUPABASE_URL = 'https://illuhxmzyovbekduxmau.supabase.co';
-  var SUPABASE_KEY = 'sb_publishable_4v7wnlP_ih4Bc-wZcg0vKg_fBZJl2DN';
+  var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlsbHVoeG16eW92YmVrZHV4bWF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyODk0MTgsImV4cCI6MjA4Nzg2NTQxOH0.TnTHqtjW_L-48b2XtaNTRIOj-eBZqK2Fi5Vynm0oJR8';
+
 
   // ─── Content Catalog ─────────────────────────────
   // Edit labels/costs here. Chapter text lives in /content/chX.js files.
