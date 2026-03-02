@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HH Test Controls</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: transparent;
+      font-family: 'Share Tech Mono', monospace;
+      padding: 10px 16px;
+    }
+    #hh-test {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      padding: 10px 14px;
+      background: rgba(252,178,109,0.04);
+      border: 1px dashed rgba(252,178,109,0.2);
+      max-width: 520px;
+    }
+    #hh-test span {
+      font-size: 9px;
+      color: rgba(252,178,109,0.3);
+      letter-spacing: .1em;
+      margin-right: 4px;
+    }
+    #hh-test button {
+      background: none;
+      border: 1px solid rgba(252,178,109,0.2);
+      color: rgba(252,178,109,0.5);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      letter-spacing: .06em;
+      padding: 4px 10px;
+      cursor: pointer;
+    }
+    #hh-test button:hover { color: #FCB26D; border-color: rgba(252,178,109,0.5); }
+    #hh-test button.danger { border-color: rgba(255,80,80,0.2); color: rgba(255,80,80,0.4); }
+    #hh-test button.danger:hover { border-color: rgba(255,80,80,0.5); color: rgba(255,80,80,0.7); }
+  </style>
+</head>
+<body>
+
+<!--
+  ╔══════════════════════════════════════════════════╗
+  ║  TEST CONTROLS — REMOVE THIS EMBED BEFORE LIVE  ║
+  ║  This file must be on the same Carrd page as    ║
+  ║  the HUD embed so it can share window.HH state  ║
+  ╚══════════════════════════════════════════════════╝
+-->
+
+<div id="hh-test">
+  <span>✦ TEST ·</span>
+
+  <!-- Add points -->
+  <button onclick="HHTest.addPts(50)">+50 pts</button>
+  <button onclick="HHTest.addPts(200)">+200 pts</button>
+
+  <!-- Simulate day passing (lets you claim daily login again) -->
+  <button onclick="HHTest.skipDay()">skip 1 day</button>
+
+  <!-- Unlock everything instantly -->
+  <button onclick="HHTest.unlockAll()">unlock all</button>
+
+  <!-- Reset all progress (asks confirmation) -->
+  <button class="danger" onclick="HHTest.reset()">reset all</button>
+</div>
+
+<script>
+var HHTest = {
+
+  // Wait for HH to be ready, then run fn
+  _ready: function(fn) {
+    if (window.HH && window.HH.loaded) { fn(); return; }
+    window.addEventListener('hhReady', fn, { once: true });
+  },
+
+  addPts: function(n) {
+    HHTest._ready(async function() {
+      window.HH.points += n;
+      await window.HHSave();
+      window.HHRender();
+      window.dispatchEvent(new CustomEvent('hhUpdate', { detail: window.HH }));
+    });
+  },
+
+  // Sets last_checkin to yesterday so daily login can be claimed again
+  skipDay: function() {
+    HHTest._ready(async function() {
+      var yesterday = new Date(Date.now() + 7 * 3600000 - 86400000).toISOString().slice(0, 10);
+      window.HH.lastCheckin = yesterday;
+      await window.HHSave();
+      window.HHRender();
+    });
+  },
+
+  // Unlock every chapter, fanfic, and post
+  unlockAll: function() {
+    HHTest._ready(async function() {
+      var all = [];
+      if (window.HH_CATALOG) {
+        window.HH_CATALOG.CHAPTERS.forEach(function(c) { all.push(c.id); });
+        window.HH_CATALOG.POSTS.forEach(function(p)    { all.push(p.id); });
+      }
+      window.HH.unlocked = all;
+      await window.HHSave();
+      window.HHRender();
+      window.dispatchEvent(new CustomEvent('hhUpdate', { detail: window.HH }));
+    });
+  },
+
+  // Full reset — wipes all progress
+  reset: function() {
+    if (!confirm('Reset ALL progress? This cannot be undone.')) return;
+    HHTest._ready(async function() {
+      window.HH.points       = 0;
+      window.HH.streak       = 0;
+      window.HH.lastCheckin  = null;
+      window.HH.unlocked     = [];
+      await window.HHSave();
+      window.HHRender();
+      window.dispatchEvent(new CustomEvent('hhUpdate', { detail: window.HH }));
+    });
+  },
+
+};
+</script>
+
+</body>
+</html>

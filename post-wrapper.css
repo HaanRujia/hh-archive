@@ -1,0 +1,69 @@
+/* post-wrapper.css
+   Drop this link into any post embed that needs locking:
+   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/HaanRujia/hh-archive@main/post-wrapper/post-wrapper.css">
+*/
+
+/* The wrapper div you put around your existing post HTML */
+.hh-post {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Lock overlay — covers the entire post */
+.hh-post-lock {
+  position: absolute;
+  inset: 0;
+  background: #090806;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  z-index: 10;
+  transition: opacity .3s;
+}
+
+/* Blurred preview of post peeking behind */
+.hh-post.hh-locked > *:not(.hh-post-lock) {
+  filter: blur(8px);
+  pointer-events: none;
+  user-select: none;
+}
+
+.hh-lock-icon {
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  color: rgba(252,178,109,0.15);
+  letter-spacing: .15em;
+}
+.hh-lock-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  color: rgba(252,178,109,0.2);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.hh-lock-pts {
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  color: rgba(252,178,109,0.4);
+}
+
+/* Hide lock overlay when unlocked */
+.hh-post:not(.hh-locked) .hh-post-lock {
+  display: none;
+}
+.hh-post:not(.hh-locked) > * {
+  filter: none;
+  pointer-events: auto;
+  user-select: auto;
+}
+
+/* Fade-in animation when post unlocks */
+@keyframes hhReveal {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hh-post.hh-revealed {
+  animation: hhReveal .5s ease;
+}

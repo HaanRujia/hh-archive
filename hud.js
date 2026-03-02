@@ -1,360 +1,284 @@
-// ══════════════════════════════════════
-// DATA
-// ══════════════════════════════════════
+// ═══════════════════════════════════════════════════
+// hud.js — Story Vault HUD
+// Supabase: illuhxmzyovbekduxmau
+// ═══════════════════════════════════════════════════
 
-var ALL_ITEMS = [
-  // ── Chapters ──
-  {
-    id: 'ch1', type: 'chapter', label: 'Chapter 1', sub: 'something between us', cost: 10,
-    content: `
-      <p>It started the way most things between them did — quietly, without announcement.
-      <em>She had been nine years old the first time she noticed him.</em></p>
-      <p>He was sitting on the steps of his mother's store with a book open in his lap, but not reading it.
-      He watched a cat across the street with the patient attention of someone who had nowhere else to be.</p>
-      <div class="sv-divider">· · ✦ · ·</div>
-      <p><strong>She had thought:</strong> <em>That kid is very strange.</em> Then she went inside to buy candy
-      and thought nothing of it for three days — at which point she realized she was watching for him every
-      morning on her way to school.</p>
-      <p>The first time he actually spoke to her, she nearly stepped on him. He was crouched on the pavement
-      looking at an old coin, corroded green at the edges. <em>"Found it in the drain,"</em> he said, without
-      looking up. She said <em>"That's disgusting"</em> and kept walking. He laughed — the kind that sounded
-      like he wasn't sure he was allowed to.</p>
-    `
-  },
-  {
-    id: 'ch2', type: 'chapter', label: 'Chapter 2', sub: 'the fence between us', cost: 20,
-    content: `
-      <p>By the time they were eleven it was simply understood that Hikari existed in Haan's orbit —
-      present, inevitable, maintaining a precise and careful distance.</p>
-      <p>There was a low concrete fence between their homes, a crack running through it patched badly with
-      different-colored cement. <em>Hikari had memorized every inch of it.</em></p>
-      <div class="sv-divider">· · ✦ · ·</div>
-      <p>She couldn't say when she started sitting on her side of it in the evenings. Or when he started
-      appearing on his. Or when the habit of it settled over them like weather.
-      <strong>Sometimes they just sat.</strong> And it was the most restful thing she knew.</p>
-    `
-  },
-  { id: 'ch3', type: 'chapter', label: 'Chapter 3', sub: 'placeholder', cost: 20, content: '<p>Chapter 3 — add your content here.</p>' },
-  { id: 'ch4', type: 'chapter', label: 'Chapter 4', sub: '???',         cost: 25, content: '<p>Chapter 4 — add your content here.</p>' },
-  { id: 'ch5', type: 'chapter', label: 'Chapter 5', sub: '???',         cost: 30, content: '<p>Chapter 5 — add your content here.</p>' },
+(function () {
+  'use strict';
 
-  // ── Fanfics (unlock after all chapters) ──
-  { id: 'f1', type: 'fanfic', label: 'Fanfic 1', sub: 'what if — the rain',  cost: 40, content: '<p>Fanfic 1 — add your content here.</p>' },
-  { id: 'f2', type: 'fanfic', label: 'Fanfic 2', sub: 'an alternate ending', cost: 40, content: '<p>Fanfic 2 — add your content here.</p>' },
+  // ─── Supabase Config ──────────────────────────────
+  var SUPABASE_URL = 'https://illuhxmzyovbekduxmau.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_4v7wnlP_ih4Bc-wZcg0vKg_fBZJl2DN';
 
-  // ── Posts (listed in menu only) ──
-  { id: 'p1', type: 'post', label: 'the rooftop, 2am',     cost: 50 },
-  { id: 'p2', type: 'post', label: 'you must be his wife', cost: 50 },
-  { id: 'p3', type: 'post', label: 'wtf',                  cost: 50 },
-  { id: 'p4', type: 'post', label: 'the party incident',   cost: 50 },
-];
+  // ─── Content Catalog ─────────────────────────────
+  // Edit labels/costs here. Chapter text lives in /content/chX.js files.
+  var CHAPTERS = [
+    { id: 'ch1', type: 'chapter', label: 'Chapter 1', sub: 'something between us', cost: 10  },
+    { id: 'ch2', type: 'chapter', label: 'Chapter 2', sub: 'the fence between us', cost: 20  },
+    { id: 'ch3', type: 'chapter', label: 'Chapter 3', sub: '???',                  cost: 20  },
+    { id: 'ch4', type: 'chapter', label: 'Chapter 4', sub: '???',                  cost: 25  },
+    { id: 'ch5', type: 'chapter', label: 'Chapter 5', sub: '???',                  cost: 30  },
+    { id: 'f1',  type: 'fanfic',  label: 'Fanfic 1',  sub: 'what if — the rain',   cost: 40  },
+    { id: 'f2',  type: 'fanfic',  label: 'Fanfic 2',  sub: 'an alternate ending',  cost: 40  },
+  ];
+  var POSTS = [
+    { id: 'p1', label: 'the rooftop, 2am',    cost: 50 },
+    { id: 'p2', label: 'you must be his wife', cost: 50 },
+    { id: 'p3', label: 'wtf',                  cost: 50 },
+    { id: 'p4', label: 'the party incident',   cost: 50 },
+  ];
 
-var CHAPTERS = ALL_ITEMS.filter(function(x) { return x.type === 'chapter'; });
-var FANFICS  = ALL_ITEMS.filter(function(x) { return x.type === 'fanfic';  });
-var SV_ITEMS = CHAPTERS.concat(FANFICS);
-var POSTS    = ALL_ITEMS.filter(function(x) { return x.type === 'post';    });
+  // Expose catalog to other components (reader, chapter-menu, post-wrapper)
+  window.HH_CATALOG = { CHAPTERS: CHAPTERS, POSTS: POSTS };
 
-// ══════════════════════════════════════
-// STATE
-// ══════════════════════════════════════
+  // ─── Global State ────────────────────────────────
+  window.HH = {
+    uid:          null,
+    points:       0,
+    streak:       0,
+    lastCheckin:  null,
+    unlocked:     [],   // array of ids: 'ch1', 'ch2', 'p1', etc.
+    loaded:       false,
+  };
 
-var STATE = {
-  points: 0,
-  streak: 0,
-  checkedInToday: false,
-  owned: [],
-  name: 'Anonymous',
-  username: 'visitor'
-};
+  var sb = null;
 
-var svIndex = 0;
+  // ─── Helpers ─────────────────────────────────────
+  function isOwned(id)   { return window.HH.unlocked.indexOf(id) !== -1; }
+  function allOwned(arr) { return arr.every(function (x) { return isOwned(x.id); }); }
 
-// ══════════════════════════════════════
-// HELPERS
-// ══════════════════════════════════════
+  function getTodayGMT7() {
+    return new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
+  }
+  function getYesterdayGMT7() {
+    return new Date(Date.now() + 7 * 3600000 - 86400000).toISOString().slice(0, 10);
+  }
 
-function isOwned(id) { return STATE.owned.indexOf(id) !== -1; }
-function allOwned(arr) { return arr.every(function(x) { return isOwned(x.id); }); }
-function chapsDone() { return allOwned(CHAPTERS); }
+  function toast(msg) {
+    var el = document.getElementById('hh-toast');
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(window._hhToast);
+    window._hhToast = setTimeout(function () { el.classList.remove('show'); }, 2400);
+  }
 
-function toast(msg) {
-  var el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(window._tt);
-  window._tt = setTimeout(function() { el.classList.remove('show'); }, 2200);
-}
+  function fireEvent(name) {
+    window.dispatchEvent(new CustomEvent(name, { detail: window.HH }));
+  }
 
-function flashPts() {
-  var el = document.getElementById('stat-pts');
-  el.classList.remove('pts-flash');
-  void el.offsetWidth;
-  el.classList.add('pts-flash');
-}
+  function flashPts() {
+    var el = document.getElementById('hh-pts');
+    if (!el) return;
+    el.classList.remove('pts-flash');
+    void el.offsetWidth;
+    el.classList.add('pts-flash');
+  }
 
-function nextIn(arr, requirePrev) {
-  for (var i = 0; i < arr.length; i++) {
-    if (isOwned(arr[i].id)) continue;
-    if (!requirePrev || i === 0 || isOwned(arr[i - 1].id)) return arr[i];
+  // ─── Next unlock logic ────────────────────────────
+  function nextChapter() {
+    var chapsDone = allOwned(CHAPTERS.filter(function (x) { return x.type === 'chapter'; }));
+    for (var i = 0; i < CHAPTERS.length; i++) {
+      var ch = CHAPTERS[i];
+      if (isOwned(ch.id)) continue;
+      if (ch.type === 'chapter') {
+        // Must own previous chapter first
+        if (i === 0 || isOwned(CHAPTERS[i - 1].id)) return ch;
+        return null; // gap in sequence
+      }
+      if (ch.type === 'fanfic') {
+        // Fanfics only after all chapters done
+        return chapsDone ? ch : null;
+      }
+    }
+    return null; // all done
+  }
+
+  function nextPost() {
+    for (var i = 0; i < POSTS.length; i++) {
+      if (!isOwned(POSTS[i].id)) return POSTS[i];
+    }
     return null;
   }
-  return null;
-}
 
-// ══════════════════════════════════════
-// RENDER
-// ══════════════════════════════════════
+  // ─── Supabase ────────────────────────────────────
+  async function loadUser() {
+    var uid = localStorage.getItem('hh_uid');
+    if (!uid) {
+      uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      localStorage.setItem('hh_uid', uid);
+    }
+    window.HH.uid = uid;
 
-function render() {
-  document.getElementById('pts-val').textContent    = STATE.points;
-  document.getElementById('streak-val').textContent = STATE.streak + (STATE.streak >= 3 ? ' 🔥' : '');
-  document.getElementById('m-name').textContent     = STATE.name;
-  document.getElementById('m-handle').textContent   = '@' + STATE.username;
-  document.getElementById('m-av').textContent       = STATE.name.charAt(0).toUpperCase();
+    try {
+      var res = await sb.from('user_progress')
+        .select('points, streak, last_checkin, unlocked_posts')
+        .eq('username', uid)
+        .maybeSingle();
 
-  // Chapter/fanfic button
-  var nextCh   = nextIn(CHAPTERS, true);
-  var nextFn   = chapsDone() ? nextIn(FANFICS, false) : null;
-  var nextItem = nextCh || nextFn;
-
-  var btnCh     = document.getElementById('btn-chapter');
-  var btnChCost = document.getElementById('btn-chapter-cost');
-  var btnChSub  = document.getElementById('btn-chapter-sub');
-
-  if (nextItem) {
-    btnCh.disabled        = false;
-    btnChCost.textContent = nextItem.cost + ' pts';
-    btnChSub.textContent  = nextCh
-      ? 'stories · fanfics unlock after all chapters'
-      : 'fanfics · all chapters complete ✦';
-  } else if (allOwned(CHAPTERS) && allOwned(FANFICS)) {
-    btnCh.disabled        = true;
-    btnChCost.textContent = '';
-    btnChSub.textContent  = 'all unlocked ✦';
-  } else {
-    btnCh.disabled        = true;
-    btnChCost.textContent = '';
-    btnChSub.textContent  = 'complete all chapters first';
-  }
-
-  // Post button
-  var nextP = nextIn(POSTS, false);
-  document.getElementById('btn-post-cost').textContent = nextP ? nextP.cost + ' pts' : '';
-  document.getElementById('btn-post').disabled = !nextP;
-
-  // Login button
-  var ciDone = STATE.checkedInToday;
-  document.getElementById('btn-login-txt').textContent = ciDone ? 'LOGIN CLAIMED ✦' : 'DAILY LOGIN';
-  document.getElementById('btn-login').classList.toggle('checked-in', ciDone);
-
-  renderStoryViewer();
-}
-
-// ── Story Viewer ──
-function renderStoryViewer() {
-  var tabs = document.getElementById('sv-tabs');
-  tabs.innerHTML = '';
-
-  SV_ITEMS.forEach(function(item, i) {
-    var owned    = isOwned(item.id);
-    var isActive = i === svIndex;
-    var btn      = document.createElement('button');
-
-    btn.className   = 'sv-tab ' + (isActive ? 'active-tab' : owned ? 'unlocked-tab' : 'locked-tab');
-    btn.textContent = item.label;
-
-    if (owned) {
-      btn.onclick = (function(idx) { return function() { svIndex = idx; renderStoryViewer(); }; })(i);
+      if (res.data) {
+        window.HH.points      = res.data.points          || 0;
+        window.HH.streak      = res.data.streak          || 0;
+        window.HH.lastCheckin = res.data.last_checkin     || null;
+        window.HH.unlocked    = res.data.unlocked_posts   || [];
+      } else {
+        // First visit — create row
+        await sb.from('user_progress').insert({
+          username:       uid,
+          points:         0,
+          streak:         0,
+          last_checkin:   null,
+          unlocked_posts: [],
+        });
+      }
+    } catch (e) {
+      console.warn('HH: load error', e);
     }
 
-    tabs.appendChild(btn);
-  });
-
-  var item  = SV_ITEMS[svIndex];
-  var owned = isOwned(item.id);
-
-  document.getElementById('sv-title').textContent = item.label.toUpperCase();
-  document.getElementById('sv-sub').textContent   = owned ? item.sub : 'locked';
-
-  document.getElementById('sv-locked-area').style.display = owned ? 'none'  : 'block';
-  document.getElementById('sv-open-area').style.display   = owned ? 'block' : 'none';
-
-  if (owned) { document.getElementById('sv-body').innerHTML = item.content; }
-
-  document.getElementById('sv-locked-txt').textContent = 'unlock "' + item.label + '" via the menu above';
-  document.getElementById('sv-locked-pts').textContent = 'cost: ' + item.cost + ' pts';
-  document.getElementById('sv-prog').textContent       = (svIndex + 1) + ' / ' + SV_ITEMS.length;
-  document.getElementById('sv-prev').disabled = svIndex === 0;
-  document.getElementById('sv-next').disabled = svIndex === SV_ITEMS.length - 1;
-}
-
-function svNav(dir) {
-  svIndex = Math.max(0, Math.min(SV_ITEMS.length - 1, svIndex + dir));
-  var b = document.getElementById('sv-body');
-  if (b) b.scrollTop = 0;
-  renderStoryViewer();
-}
-
-// ══════════════════════════════════════
-// MODALS
-// ══════════════════════════════════════
-
-function openModal(type) {
-  if (type === 'chapter') renderChModal();
-  if (type === 'post')    renderPostModal();
-  if (type === 'login')   renderLoginModal();
-  document.getElementById('modal-' + type).classList.add('open');
-}
-
-function closeModal(type) {
-  document.getElementById('modal-' + type).classList.remove('open');
-}
-
-function renderChModal() {
-  document.getElementById('modal-ch-pts').textContent = STATE.points;
-  var list     = document.getElementById('modal-ch-list');
-  list.innerHTML = '';
-  var allItems = CHAPTERS.concat(FANFICS);
-
-  allItems.forEach(function(item, i) {
-    var owned      = isOwned(item.id);
-    var isFanfic   = item.type === 'fanfic';
-    var prevOwned  = i === 0 || isOwned(allItems[i - 1].id);
-    var fanficGate = isFanfic && !chapsDone();
-    var isNext     = !owned && prevOwned && !fanficGate;
-    var canAfford  = STATE.points >= item.cost;
-
-    var div = document.createElement('div');
-    div.className = 'ul-item ' + (owned ? 'owned' : isNext ? 'available' : 'locked-item');
-
-    var rightHTML = owned
-      ? '<span class="ul-check">✦</span>'
-      : isNext
-        ? '<div class="ul-right">' +
-            '<span class="ul-price">' + item.cost + ' pts</span>' +
-            '<button class="ul-unlock-btn"' + (canAfford ? '' : ' disabled') +
-            ' onclick="purchase(\'' + item.id + '\',' + item.cost + ',\'chapter\')">' +
-            (canAfford ? 'UNLOCK' : 'NEED PTS') + '</button>' +
-          '</div>'
-        : '<span class="ul-price">' + item.cost + '</span>';
-
-    div.innerHTML =
-      '<span class="ul-icon">' + (owned ? '◆' : isNext ? '▸' : '·') + '</span>' +
-      '<div class="ul-info">' +
-        '<div class="ul-name">' + (isFanfic ? '[FANFIC] ' : '') + item.label + '</div>' +
-        '<div class="ul-sub">' + (owned || isNext ? item.sub : fanficGate ? 'unlock all chapters first' : 'locked') + '</div>' +
-      '</div>' +
-      rightHTML;
-
-    list.appendChild(div);
-  });
-}
-
-function renderPostModal() {
-  document.getElementById('modal-post-pts').textContent = STATE.points;
-  var list = document.getElementById('modal-post-list');
-  list.innerHTML = '';
-
-  POSTS.forEach(function(item) {
-    var owned     = isOwned(item.id);
-    var canAfford = STATE.points >= item.cost;
-    var div       = document.createElement('div');
-    div.className = 'ul-item ' + (owned ? 'owned' : 'available');
-
-    div.innerHTML =
-      '<span class="ul-icon">' + (owned ? '◆' : '▸') + '</span>' +
-      '<div class="ul-info">' +
-        '<div class="ul-name">' + item.label + '</div>' +
-        '<div class="ul-sub">' + (owned ? 'unlocked' : 'character post') + '</div>' +
-      '</div>' +
-      (owned
-        ? '<span class="ul-check">✦</span>'
-        : '<div class="ul-right">' +
-            '<span class="ul-price">' + item.cost + ' pts</span>' +
-            '<button class="ul-unlock-btn"' + (canAfford ? '' : ' disabled') +
-            ' onclick="purchase(\'' + item.id + '\',' + item.cost + ',\'post\')">' +
-            (canAfford ? 'UNLOCK' : 'NEED PTS') + '</button>' +
-          '</div>');
-
-    list.appendChild(div);
-  });
-}
-
-function renderLoginModal() {
-  var ptsEarned = STATE.checkedInToday
-    ? 10 + (STATE.streak >= 3 ? 5 : 0)
-    : 10 + (STATE.streak >= 2 ? 5 : 0);
-
-  document.getElementById('login-pts-big').textContent = '+' + ptsEarned;
-  document.getElementById('login-bonus').textContent   = STATE.streak >= 2
-    ? '🔥 streak bonus active +5 pts'
-    : STATE.streak === 1 ? 'reach 3-day streak for bonus!' : '';
-
-  var pips = document.getElementById('login-streak');
-  pips.innerHTML = '';
-  for (var i = 0; i < 7; i++) {
-    var pip = document.createElement('div');
-    pip.className = 'streak-pip' + (i < STATE.streak ? ' active' : '');
-    pips.appendChild(pip);
+    window.HH.loaded = true;
+    render();
+    fireEvent('hhReady');
   }
 
-  document.getElementById('login-claim-btn').disabled = STATE.checkedInToday;
-  document.getElementById('login-done').textContent   = STATE.checkedInToday ? 'come back tomorrow ✦' : '';
-}
-
-// ══════════════════════════════════════
-// ACTIONS
-// ══════════════════════════════════════
-
-function purchase(id, cost, modalType) {
-  if (STATE.points < cost) { toast('NOT ENOUGH POINTS'); return; }
-  STATE.points -= cost;
-  STATE.owned.push(id);
-  flashPts();
-  toast('✦ UNLOCKED · -' + cost + ' PTS');
-  render();
-  if (modalType === 'chapter') renderChModal();
-  if (modalType === 'post')    renderPostModal();
-}
-
-function doCheckin() {
-  if (STATE.checkedInToday) return;
-  STATE.streak += 1;
-  var earned = 50 + (STATE.streak >= 3 ? 5 : 0); // TEST MODE: 50 pts. Change to 10 for production.
-  STATE.points += earned;
-  STATE.checkedInToday = true;
-  flashPts();
-  toast('+' + earned + ' PTS · STREAK ' + STATE.streak + (STATE.streak >= 3 ? ' 🔥' : ''));
-  render();
-  renderLoginModal();
-}
-
-function togglePP() {
-  var p    = document.getElementById('pp');
-  var open = p.classList.toggle('open');
-  if (open) {
-    document.getElementById('pp-dn').value = STATE.name !== 'Anonymous' ? STATE.name : '';
-    document.getElementById('pp-un').value = STATE.username !== 'visitor' ? STATE.username : '';
+  async function saveUser() {
+    if (!window.HH.uid) return;
+    try {
+      await sb.from('user_progress').update({
+        points:         window.HH.points,
+        streak:         window.HH.streak,
+        last_checkin:   window.HH.lastCheckin,
+        unlocked_posts: window.HH.unlocked,
+      }).eq('username', window.HH.uid);
+    } catch (e) {
+      console.warn('HH: save error', e);
+    }
   }
-}
 
-function savePP() {
-  var n = document.getElementById('pp-dn').value.trim() || 'Anonymous';
-  var u = document.getElementById('pp-un').value.trim().replace(/^@/, '') || 'visitor';
-  STATE.name     = n;
-  STATE.username = u;
-  var h = document.getElementById('pp-hint');
-  h.textContent = '✓ saved!';
-  setTimeout(function() { h.textContent = 'saved across all posts ✦'; }, 2000);
-  render();
-}
+  // ─── Button Actions ───────────────────────────────
+  async function doUnlockChapter() {
+    var next = nextChapter();
+    if (!next)                           { toast('ALL CHAPTERS UNLOCKED ✦'); return; }
+    if (window.HH.points < next.cost)    { toast('NEED ' + next.cost + ' PTS'); return; }
 
-function resetState() {
-  STATE    = { points: 0, streak: 0, checkedInToday: false, owned: [], name: 'Anonymous', username: 'visitor' };
-  svIndex  = 0;
-  toast('STATE RESET');
-  render();
-}
+    window.HH.points -= next.cost;
+    window.HH.unlocked = window.HH.unlocked.concat([next.id]);
+    flashPts();
+    toast('✦ ' + next.label.toUpperCase() + ' UNLOCKED');
+    await saveUser();
+    render();
+    fireEvent('hhUpdate');
+  }
 
-// ── Init ──
-render();
+  async function doUnlockPost() {
+    var next = nextPost();
+    if (!next)                           { toast('ALL POSTS UNLOCKED ✦'); return; }
+    if (window.HH.points < next.cost)    { toast('NEED ' + next.cost + ' PTS'); return; }
+
+    window.HH.points -= next.cost;
+    window.HH.unlocked = window.HH.unlocked.concat([next.id]);
+    flashPts();
+    toast('✦ POST UNLOCKED · ' + next.label);
+    await saveUser();
+    render();
+    fireEvent('hhUpdate');
+  }
+
+  async function doCheckin() {
+    var today = getTodayGMT7();
+    if (window.HH.lastCheckin === today) { toast('ALREADY CLAIMED TODAY'); return; }
+
+    // Streak logic
+    if (window.HH.lastCheckin === getYesterdayGMT7()) {
+      window.HH.streak += 1;
+    } else {
+      window.HH.streak = 1; // streak broken or first time
+    }
+
+    var pts = 10 + (window.HH.streak >= 3 ? 5 : 0);
+    window.HH.points      += pts;
+    window.HH.lastCheckin  = today;
+    flashPts();
+    toast('+' + pts + ' PTS · STREAK ' + window.HH.streak + (window.HH.streak >= 3 ? ' 🔥' : ''));
+    await saveUser();
+    render();
+    fireEvent('hhUpdate');
+  }
+
+  // ─── Render ───────────────────────────────────────
+  function render() {
+    var g = function (id) { return document.getElementById(id); };
+
+    // Stats
+    if (g('hh-pts'))    g('hh-pts').textContent    = window.HH.points;
+    if (g('hh-streak')) g('hh-streak').textContent = window.HH.streak + (window.HH.streak >= 3 ? ' 🔥' : '');
+
+    // ── Chapter button ──
+    var next = nextChapter();
+    var btnCh = g('hh-btn-chapter');
+    if (btnCh) {
+      if (!next) {
+        btnCh.disabled = true;
+        if (g('hh-ch-sub'))  g('hh-ch-sub').textContent  = 'all unlocked ✦';
+        if (g('hh-ch-cost')) g('hh-ch-cost').textContent = '';
+      } else {
+        var ok = window.HH.points >= next.cost;
+        btnCh.disabled      = false;
+        btnCh.style.opacity = ok ? '1' : '0.55';
+        if (g('hh-ch-sub'))  g('hh-ch-sub').textContent  = next.label + (next.sub ? ' · ' + next.sub : '');
+        if (g('hh-ch-cost')) g('hh-ch-cost').textContent = (ok ? '' : 'need ') + next.cost + ' pts';
+      }
+    }
+
+    // ── Post button ──
+    var nextP = nextPost();
+    var btnPost = g('hh-btn-post');
+    if (btnPost) {
+      if (!nextP) {
+        btnPost.disabled = true;
+        if (g('hh-post-sub'))  g('hh-post-sub').textContent  = 'all posts unlocked ✦';
+        if (g('hh-post-cost')) g('hh-post-cost').textContent = '';
+      } else {
+        var okP = window.HH.points >= nextP.cost;
+        btnPost.disabled      = false;
+        btnPost.style.opacity = okP ? '1' : '0.55';
+        if (g('hh-post-sub'))  g('hh-post-sub').textContent  = nextP.label;
+        if (g('hh-post-cost')) g('hh-post-cost').textContent = (okP ? '' : 'need ') + nextP.cost + ' pts';
+      }
+    }
+
+    // ── Login button ──
+    var claimed = window.HH.lastCheckin === getTodayGMT7();
+    var btnLogin = g('hh-btn-login');
+    if (btnLogin) {
+      btnLogin.classList.toggle('claimed', claimed);
+      btnLogin.disabled = claimed;
+      if (g('hh-login-sub')) {
+        g('hh-login-sub').textContent = claimed
+          ? 'come back tomorrow ✦'
+          : '+10 pts' + (window.HH.streak >= 2 ? ' · +5 streak bonus' : '') + ' · resets gmt+7';
+      }
+    }
+  }
+
+  // ─── Expose for test controls & other files ──────
+  window.HHSave    = saveUser;
+  window.HHRender  = render;
+  window.HHActions = {
+    unlockChapter: doUnlockChapter,
+    unlockPost:    doUnlockPost,
+    checkin:       doCheckin,
+  };
+
+  // ─── Init ─────────────────────────────────────────
+  function init() {
+    sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    loadUser();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+})();
